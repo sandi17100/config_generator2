@@ -5,7 +5,6 @@ app = Flask(__name__)
 @app.route("/", methods=["GET", "POST"])
 def home():
 
-    # default values
     port = ""
     onu_type = ""
     sn = ""
@@ -60,7 +59,6 @@ $
     --muted: #64748B;
     --sky-blue: #87CEEB;
     --dark-blue: #1E3A8A;
-    --white: #FFFFFF;
 }}
 
 body {{
@@ -76,7 +74,6 @@ body {{
     border-bottom: 2px solid var(--border);
     text-align: center;
     background: var(--panel);
-    color: var(--text);
     font-weight: bold;
 }}
 
@@ -171,6 +168,21 @@ label {{
     font-size: 13px;
     font-weight: bold;
 }}
+
+#toast {{
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1E3A8A;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    display: none;
+    z-index: 9999;
+}}
 </style>
 </head>
 
@@ -181,12 +193,12 @@ label {{
 <div class="container">
 
     <div class="left">
-        <form method="POST">
+        <form method="POST" onsubmit="saveInputs()">
 
             <label>frame/slot/port</label>
             <input name="port" value="{port}" placeholder="1/3/15" required>
 
-            <label>ONU Type</label>
+            <label>ONU Type (F671Y)</label>
             <input name="type" value="{onu_type}" placeholder="F671Y" required>
 
             <label>SN</label>
@@ -208,6 +220,7 @@ label {{
                 <button class="gen" type="submit">GENERATE</button>
                 <button class="copy" type="button" onclick="copyAll()">COPY ALL</button>
             </div>
+
         </form>
     </div>
 
@@ -217,10 +230,12 @@ label {{
 
 </div>
 
+<div id="toast"></div>
+
 <script>
 const fields = ["port", "type", "sn", "onu", "user", "pass", "svlan"];
 
-// Load saved inputs
+// Restore saved inputs
 window.onload = function() {{
     fields.forEach(field => {{
         let input = document.querySelector(`[name="${{field}}"]`);
@@ -242,22 +257,44 @@ fields.forEach(field => {{
     }}
 }});
 
+// Save again before submit
+function saveInputs() {{
+    fields.forEach(field => {{
+        let input = document.querySelector(`[name="${{field}}"]`);
+        if (input) {{
+            localStorage.setItem(field, input.value);
+        }}
+    }});
+}}
+
 // Copy config
 function copyAll() {{
     let text = document.getElementById("out").innerText;
 
     if (!text || text.trim() === "") {{
-        alert("Nothing to copy");
+        showToast("Nothing to copy");
         return;
     }}
 
     navigator.clipboard.writeText(text)
         .then(() => {{
-            alert("COPIED SUCCESSFULLY");
+            showToast("COPIED SUCCESSFULLY");
         }})
         .catch(() => {{
-            alert("Copy failed");
+            showToast("Copy failed");
         }});
+}}
+
+// Toast popup
+function showToast(message) {{
+    let toast = document.getElementById("toast");
+    toast.innerText = message;
+    toast.style.display = "block";
+
+    clearTimeout(window.toastTimer);
+    window.toastTimer = setTimeout(() => {{
+        toast.style.display = "none";
+    }}, 2000);
 }}
 </script>
 
