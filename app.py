@@ -23,22 +23,22 @@ def home():
         password = request.form.get("pass", "")
         svlan = request.form.get("svlan", "")
 
-        config = f"""interface gpon_olt-{port}
-  onu {onu_id} type ZXHN-{onu_type} sn {sn}
-  bind-onu {onu_id} profile line HSI-Nolimit
-  bind-onu {onu_id} profile service HSI-Nolimit
+        config = f"""interface gpon_olt-<span class="highlight">{port}</span>
+  onu <span class="highlight">{onu_id}</span> type ZXHN-<span class="highlight">{onu_type}</span> sn <span class="highlight">{sn}</span>
+  bind-onu <span class="highlight">{onu_id}</span> profile line HSI-Nolimit
+  bind-onu <span class="highlight">{onu_id}</span> profile service HSI-Nolimit
 $
-  interface gpon_onu-{port}:{onu_id}
-  name {user}
+  interface gpon_onu-<span class="highlight">{port}</span>:<span class="highlight">{onu_id}</span>
+  name <span class="highlight">{user}</span>
 $
-  interface vport-{port}.{onu_id}:1
-  service-port 1 user-vlan 1000 vlan 11 svlan {svlan}
+  interface vport-<span class="highlight">{port}</span>.<span class="highlight">{onu_id}</span>:1
+  service-port 1 user-vlan 1000 vlan 11 svlan <span class="highlight">{svlan}</span>
 $
-pon-onu-mng gpon_onu-{port}:{onu_id}
+pon-onu-mng gpon_onu-<span class="highlight">{port}</span>:<span class="highlight">{onu_id}</span>
   security-mgmt 1 state enable mode forward protocol https
   security-mgmt 2 state enable mode forward protocol telnet
   security-mgmt 3 state enable mode forward protocol web
-  wan-ip ipv4 mode pppoe auth pap username {user} password {password} vlan-profile HSI-VLAN host 1
+  wan-ip ipv4 mode pppoe auth pap username <span class="highlight">{user}</span> password <span class="highlight">{password}</span> vlan-profile HSI-VLAN host 1
   wan 1 ethuni 1,2,3,4 ssid 1,5 service internet host 1
 $
 """
@@ -149,6 +149,14 @@ pre {{
     border-radius: 6px;
     font-size: 15px;
     line-height: 1.5;
+}}
+
+.highlight {{
+    color: #00E5FF;
+    font-weight: bold;
+    background: rgba(255,255,255,0.08);
+    padding: 1px 3px;
+    border-radius: 3px;
 }}
 
 .btn-group {{
