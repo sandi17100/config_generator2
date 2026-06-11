@@ -1,314 +1,209 @@
-from flask import Flask, request
+from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET", "POST"])
-def home():
-
-    port = ""
-    onu_type = ""
-    sn = ""
-    onu_id = ""
-    user = ""
-    password = ""
-    svlan = ""
-    config = ""
-
-    if request.method == "POST":
-        port = request.form.get("port", "")
-        onu_type = request.form.get("type", "")
-        sn = request.form.get("sn", "")
-        onu_id = request.form.get("onu", "")
-        user = request.form.get("user", "")
-        password = request.form.get("pass", "")
-        svlan = request.form.get("svlan", "")
-
-        config = f"""interface gpon_olt-<span class="highlight">{port}</span>
-  onu <span class="highlight">{onu_id}</span> type ZXHN-<span class="highlight">{onu_type}</span> sn <span class="highlight">{sn}</span>
-  bind-onu <span class="highlight">{onu_id}</span> profile line HSI-Nolimit
-  bind-onu <span class="highlight">{onu_id}</span> profile service HSI-Nolimit
-$
-  interface gpon_onu-<span class="highlight">{port}</span>:<span class="highlight">{onu_id}</span>
-  name <span class="highlight">{user}</span>
-$
-  interface vport-<span class="highlight">{port}</span>.<span class="highlight">{onu_id}</span>:1
-  service-port 1 user-vlan 1000 vlan 11 svlan <span class="highlight">{svlan}</span>
-$
-pon-onu-mng gpon_onu-<span class="highlight">{port}</span>:<span class="highlight">{onu_id}</span>
-  security-mgmt 1 state enable mode forward protocol https
-  security-mgmt 2 state enable mode forward protocol telnet
-  security-mgmt 3 state enable mode forward protocol web
-  wan-ip ipv4 mode pppoe auth pap username <span class="highlight">{user}</span> password <span class="highlight">{password}</span> vlan-profile HSI-VLAN host 1
-  wan 1 ethuni 1,2,3,4 ssid 1,5 service internet host 1
-$
-"""
-
-    return f"""
+HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>ZTE ONU CONFIG GENERATOR</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZTE ONU Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --success: #10b981;
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --highlight: #38bdf8;
+            --term-header: #1e293b;
+        }
 
-<style>
-:root {{
-    --bg: #FFFFFF;
-    --panel: #F8FAFC;
-    --panel-2: #F1F5F9;
-    --border: #E2E8F0;
-    --text: #1E293B;
-    --muted: #64748B;
-    --sky-blue: #87CEEB;
-    --dark-blue: #1E3A8A;
-}}
+        * { box-sizing: border-box; }
 
-body {{
-    margin: 0;
-    font-family: monospace;
-    background: var(--bg);
-    font-size: 20px;
-    color: var(--text);
-}}
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 40px 20px;
+        }
 
-.top {{
-    padding: 20px;
-    border-bottom: 2px solid var(--border);
-    text-align: center;
-    background: var(--panel);
-    font-weight: bold;
-}}
+        .wrapper { max-width: 1100px; margin: auto; width: 100%; flex: 1; }
 
-.container {{
-    display: flex;
-    min-height: 100vh;
-}}
+        .title { text-align: center; font-size: 36px; font-weight: 800; margin-bottom: 5px; }
+        .title span { background: linear-gradient(to right, #818cf8, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 16px; margin-bottom: 40px; font-weight: 500; }
 
-.left {{
-    width: 35%;
-    padding: 15px;
-    border-right: 1px solid var(--border);
-    background: var(--panel);
-}}
+        .grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; }
 
-.right {{
-    width: 65%;
-    padding: 15px;
-}}
+        .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 32px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
 
-input {{
-    width: 100%;
-    padding: 10px;
-    margin: 5px 0;
-    background: var(--panel-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: 6px;
-    box-sizing: border-box;
-}}
+        /* ... [Keep existing Form and Terminal CSS unchanged] ... */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full { grid-column: 1 / -1; }
+        label { margin-bottom: 8px; font-size: 13px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        input { width: 100%; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text-main); font-size: 15px; outline: none; transition: all 0.3s ease; }
+        input:focus { border-color: var(--primary); }
+        .actions { margin-top: 32px; }
+        button.generate { width: 100%; padding: 16px 24px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, var(--primary), #818cf8); color: white; transition: all 0.3s ease; }
+        .output-card { margin-bottom: 30px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .terminal-header { background: var(--term-header); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .terminal-controls { display: flex; gap: 8px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #ef4444; } .dot.yellow { background: #eab308; } .dot.green { background: #22c55e; }
+        .terminal-title { font-size: 13px; color: var(--text-muted); }
+        .copy-btn { background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+        pre { padding: 20px; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; font-family: monospace; font-size: 14px; margin: 0; }
+        .input-value { color: var(--highlight); font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 2px 6px; border-radius: 4px; }
+        
+        .footer { text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 14px; padding: 20px; }
 
-input::placeholder {{
-    color: var(--muted);
-}}
-
-button {{
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    border-radius: 6px;
-    transition: 0.2s;
-}}
-
-.gen {{
-    background: var(--sky-blue);
-    color: var(--dark-blue);
-}}
-
-.gen:hover {{
-    background: #6BB9D8;
-}}
-
-.copy {{
-    background: var(--dark-blue);
-    color: white;
-}}
-
-.copy:hover {{
-    background: #1E40AF;
-}}
-
-pre {{
-    background: black;
-    color: #00FF00;
-    border: 1px solid #00AA00;
-    padding: 15px;
-    height: 90%;
-    overflow: auto;
-    white-space: pre-wrap;
-    border-radius: 6px;
-    font-size: 15px;
-    line-height: 1.5;
-}}
-
-.highlight {{
-    color: #00E5FF;
-    font-weight: bold;
-    background: rgba(255,255,255,0.08);
-    padding: 1px 3px;
-    border-radius: 3px;
-}}
-
-.btn-group {{
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}}
-
-.btn-group button {{
-    flex: 1;
-}}
-
-label {{
-    display: block;
-    margin-top: 12px;
-    margin-bottom: 5px;
-    font-size: 13px;
-    font-weight: bold;
-}}
-
-#toast {{
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #1E3A8A;
-    color: white;
-    padding: 12px 18px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: bold;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    display: none;
-    z-index: 9999;
-}}
-</style>
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    </style>
 </head>
-
 <body>
 
-<div class="top">ZTE ONU CONFIG GENERATOR</div>
+<div class="wrapper">
+    <div class="title">ZTE ONU <span>Config Generator</span></div>
+    <div class="subtitle">YFCI Network Provisioning</div>
 
-<div class="container">
+    <div class="grid">
+        <div class="card">
+            <form method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>PPPoE Username</label>
+                        <input name="user" value="{{ user }}" placeholder="AN1914" required>
+                    </div>
+                    <div class="form-group">
+                        <label>PPPoE Password</label>
+                        <input name="pass" value="{{ password }}" placeholder="rlVjfB2q0F" required>
+                    </div>
+                    <div class="form-group full">
+                        <label>Serial Number (SN)</label>
+                        <input name="sn" value="{{ sn }}" placeholder="ZTEGCED95CA6" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ONU Type</label>
+                        <input name="type" value="{{ onu_type }}" placeholder="F672YV9.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Frame/Slot/Port</label>
+                        <input name="port" value="{{ port }}" placeholder="1/3/15" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ONU ID</label>
+                        <input name="onu" value="{{ onu_id }}" placeholder="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SVLAN</label>
+                        <input name="svlan" value="{{ svlan }}" placeholder="2502" required>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="generate" type="submit">Generate Configuration</button>
+                </div>
+            </form>
+        </div>
 
-    <div class="left">
-        <form method="POST" onsubmit="saveInputs()">
-
-            <label>frame/slot/port</label>
-            <input name="port" value="{port}" placeholder="1/3/15" required>
-
-            <label>ONU Type (F671Y)</label>
-            <input name="type" value="{onu_type}" placeholder="F671Y" required>
-
-            <label>SN</label>
-            <input name="sn" value="{sn}" placeholder="ZTEGCED95CA6" required>
-
-            <label>ONU ID</label>
-            <input name="onu" value="{onu_id}" placeholder="8" required>
-
-            <label>Username</label>
-            <input name="user" value="{user}" placeholder="AN1914" required>
-
-            <label>Password</label>
-            <input name="pass" value="{password}" placeholder="rlVjfB2q0F" required>
-
-            <label>SVLAN</label>
-            <input name="svlan" value="{svlan}" placeholder="2502" required>
-
-            <div class="btn-group">
-                <button class="gen" type="submit">GENERATE</button>
-                <button class="copy" type="button" onclick="copyAll()">COPY ALL</button>
+        <div class="card">
+            <div class="output-card">
+                <div class="terminal-header">
+                    <div class="terminal-controls"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                    <div class="terminal-title">ONU Config Script</div>
+                    <button class="copy-btn" type="button" onclick="copyText('configOut', this)">Copy</button>
+                </div>
+                <pre id="configOut">{{ config_script | safe }}</pre>
             </div>
-
-        </form>
+            <div class="output-card">
+                <div class="terminal-header">
+                    <div class="terminal-controls"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                    <div class="terminal-title">ONU Type Add Script</div>
+                    <button class="copy-btn" type="button" onclick="copyText('onuTypeOut', this)">Copy</button>
+                </div>
+                <pre id="onuTypeOut">{{ onu_type_script | safe }}</pre>
+            </div>
+        </div>
     </div>
-
-    <div class="right">
-        <pre id="out">{config}</pre>
-    </div>
-
 </div>
 
-<div id="toast"></div>
+<footer class="footer">
+    Developed for YFCI Team | &copy; Sandy@2026
+</footer>
 
 <script>
-const fields = ["port", "type", "sn", "onu", "user", "pass", "svlan"];
-
-// Restore saved inputs
-window.onload = function() {{
-    fields.forEach(field => {{
-        let input = document.querySelector(`[name="${{field}}"]`);
-        let savedValue = localStorage.getItem(field);
-
-        if (input && savedValue) {{
-            input.value = savedValue;
-        }}
-    }});
-}};
-
-// Save while typing
-fields.forEach(field => {{
-    let input = document.querySelector(`[name="${{field}}"]`);
-    if (input) {{
-        input.addEventListener("input", function() {{
-            localStorage.setItem(field, this.value);
-        }});
-    }}
-}});
-
-// Save again before submit
-function saveInputs() {{
-    fields.forEach(field => {{
-        let input = document.querySelector(`[name="${{field}}"]`);
-        if (input) {{
-            localStorage.setItem(field, input.value);
-        }}
-    }});
-}}
-
-// Copy config
-function copyAll() {{
-    let text = document.getElementById("out").innerText;
-
-    if (!text || text.trim() === "") {{
-        showToast("Nothing to copy");
-        return;
-    }}
-
-    navigator.clipboard.writeText(text)
-        .then(() => {{
-            showToast("COPIED SUCCESSFULLY");
-        }})
-        .catch(() => {{
-            showToast("Copy failed");
-        }});
-}}
-
-// Toast popup
-function showToast(message) {{
-    let toast = document.getElementById("toast");
-    toast.innerText = message;
-    toast.style.display = "block";
-
-    clearTimeout(window.toastTimer);
-    window.toastTimer = setTimeout(() => {{
-        toast.style.display = "none";
-    }}, 2000);
-}}
+    // [Keep your existing JS logic here]
+    const fields = ["port", "type", "sn", "onu", "user", "pass", "svlan"];
+    window.onload = () => { fields.forEach(f => { const el = document.querySelector(`[name="${f}"]`); const val = localStorage.getItem(f); if(el && val && !el.value) el.value = val; }); };
+    fields.forEach(f => { const el = document.querySelector(`[name="${f}"]`); if(el) el.addEventListener("input", () => localStorage.setItem(f, el.value)); });
+    function copyText(id, btn) { const elem = document.getElementById(id); const text = elem.innerText.trim(); if(!text) return; navigator.clipboard.writeText(text); btn.innerText = "Copied!"; setTimeout(() => btn.innerText = "Copy", 2000); }
 </script>
-
 </body>
 </html>
 """
+
+@app.route("/", methods=["GET", "POST"])
+def home():
+    context = {
+        "port": "", "onu_type": "", "sn": "", "onu_id": "",
+        "user": "", "password": "", "svlan": "",
+        "onu_type_script": "", "config_script": ""
+    }
+    if request.method == "POST":
+        context.update({
+            "port": request.form.get("port", ""),
+            "onu_type": request.form.get("type", ""),
+            "sn": request.form.get("sn", ""),
+            "onu_id": request.form.get("onu", ""),
+            "user": request.form.get("user", ""),
+            "password": request.form.get("pass", ""),
+            "svlan": request.form.get("svlan", "")
+        })
+        def highlight(val): return f'<span class="input-value">{val}</span>'
+        context["config_script"] = f"""interface gpon_olt-{highlight(context['port'])}
+ onu {highlight(context['onu_id'])} type ZXHN-{highlight(context['onu_type'])} sn {highlight(context['sn'])}
+ bind-onu {highlight(context['onu_id'])} profile line HSI-Nolimit
+ bind-onu {highlight(context['onu_id'])} profile service HSI-Nolimit
+$
+interface gpon_onu-{context['port']}:{highlight(context['onu_id'])}
+ name {highlight(context['user'])}
+$
+interface vport-{context['port']}.{highlight(context['onu_id'])}:1
+ service-port 1 user-vlan 1000 vlan 11 svlan {highlight(context['svlan'])}
+$
+pon-onu-mng gpon_onu-{context['port']}:{context['onu_id']}
+ security-mgmt 1 state enable mode forward protocol https
+ security-mgmt 2 state enable mode forward protocol telnet
+ security-mgmt 3 state enable mode forward protocol web
+ wan-ip ipv4 mode pppoe auth pap username {highlight(context['user'])} password {highlight(context['password'])} vlan-profile HSI-VLAN host 1
+ wan 1 ethuni 1,2,3,4 ssid 1,5 service internet host 1
+$"""
+        context["onu_type_script"] = f"""onu-type ZXHN-{highlight(context['onu_type'])} gpon description 4ETH,2POTS,8WIFI max-tcont 8 max-gemport 32 max-iphost 6 max-ipv6-host 6
+onu-type-if ZXHN-{context['onu_type']} eth_0/1
+onu-type-if ZXHN-{context['onu_type']} eth_0/2
+onu-type-if ZXHN-{context['onu_type']} eth_0/3
+onu-type-if ZXHN-{context['onu_type']} eth_0/4
+onu-type-if ZXHN-{context['onu_type']} pots_0/1
+onu-type-if ZXHN-{context['onu_type']} wifi_0/1
+onu-type-if ZXHN-{context['onu_type']} wifi_0/2
+onu-type-if ZXHN-{context['onu_type']} wifi_0/3
+onu-type-if ZXHN-{context['onu_type']} wifi_0/4
+onu-type-if ZXHN-{context['onu_type']} wifi_0/5
+onu-type-if ZXHN-{context['onu_type']} wifi_0/6
+onu-type-if ZXHN-{context['onu_type']} wifi_0/7
+onu-type-if ZXHN-{context['onu_type']} wifi_0/8"""
+    return render_template_string(HTML_TEMPLATE, **context)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
