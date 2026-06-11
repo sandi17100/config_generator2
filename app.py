@@ -48,7 +48,6 @@ HTML_TEMPLATE = """
 
         .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: 20px; padding: 32px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
 
-        /* ... [Keep existing Form and Terminal CSS unchanged] ... */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group.full { grid-column: 1 / -1; }
@@ -57,6 +56,7 @@ HTML_TEMPLATE = """
         input:focus { border-color: var(--primary); }
         .actions { margin-top: 32px; }
         button.generate { width: 100%; padding: 16px 24px; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, var(--primary), #818cf8); color: white; transition: all 0.3s ease; }
+        
         .output-card { margin-bottom: 30px; background: var(--input-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
         .terminal-header { background: var(--term-header); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
         .terminal-controls { display: flex; gap: 8px; }
@@ -64,9 +64,11 @@ HTML_TEMPLATE = """
         .dot.red { background: #ef4444; } .dot.yellow { background: #eab308; } .dot.green { background: #22c55e; }
         .terminal-title { font-size: 13px; color: var(--text-muted); }
         .copy-btn { background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--border); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
-        pre { padding: 20px; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; font-family: monospace; font-size: 14px; margin: 0; }
-        .input-value { color: var(--highlight); font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 2px 6px; border-radius: 4px; }
         
+        /* Updated line-height to 1.5 */
+        pre { padding: 20px; color: #e2e8f0; overflow-x: auto; white-space: pre-wrap; font-family: monospace; font-size: 14px; margin: 0; line-height: 1.5; }
+        
+        .input-value { color: var(--highlight); font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 2px 6px; border-radius: 4px; }
         .footer { text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 14px; padding: 20px; }
 
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
@@ -82,38 +84,15 @@ HTML_TEMPLATE = """
         <div class="card">
             <form method="POST">
                 <div class="form-grid">
-                    <div class="form-group">
-                        <label>PPPoE Username</label>
-                        <input name="user" value="{{ user }}" placeholder="AN1914" required>
-                    </div>
-                    <div class="form-group">
-                        <label>PPPoE Password</label>
-                        <input name="pass" value="{{ password }}" placeholder="rlVjfB2q0F" required>
-                    </div>
-                    <div class="form-group full">
-                        <label>Serial Number (SN)</label>
-                        <input name="sn" value="{{ sn }}" placeholder="ZTEGCED95CA6" required>
-                    </div>
-                    <div class="form-group">
-                        <label>ONU Type</label>
-                        <input name="type" value="{{ onu_type }}" placeholder="F672YV9.1" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Frame/Slot/Port</label>
-                        <input name="port" value="{{ port }}" placeholder="1/3/15" required>
-                    </div>
-                    <div class="form-group">
-                        <label>ONU ID</label>
-                        <input name="onu" value="{{ onu_id }}" placeholder="8" required>
-                    </div>
-                    <div class="form-group">
-                        <label>SVLAN</label>
-                        <input name="svlan" value="{{ svlan }}" placeholder="2502" required>
-                    </div>
+                    <div class="form-group"><label>PPPoE Username</label><input name="user" value="{{ user }}" required></div>
+                    <div class="form-group"><label>PPPoE Password</label><input name="pass" value="{{ password }}" required></div>
+                    <div class="form-group full"><label>Serial Number (SN)</label><input name="sn" value="{{ sn }}" required></div>
+                    <div class="form-group"><label>ONU Type</label><input name="type" value="{{ onu_type }}" required></div>
+                    <div class="form-group"><label>Frame/Slot/Port</label><input name="port" value="{{ port }}" required></div>
+                    <div class="form-group"><label>ONU ID</label><input name="onu" value="{{ onu_id }}" required></div>
+                    <div class="form-group"><label>SVLAN</label><input name="svlan" value="{{ svlan }}" required></div>
                 </div>
-                <div class="actions">
-                    <button class="generate" type="submit">Generate Configuration</button>
-                </div>
+                <div class="actions"><button class="generate" type="submit">Generate Configuration</button></div>
             </form>
         </div>
 
@@ -138,12 +117,9 @@ HTML_TEMPLATE = """
     </div>
 </div>
 
-<footer class="footer">
-    Developed for YFCI Team | &copy; Sandy@2026
-</footer>
+<footer class="footer">Developed for YFCI Team | &copy; Sandy@2026</footer>
 
 <script>
-    // [Keep your existing JS logic here]
     const fields = ["port", "type", "sn", "onu", "user", "pass", "svlan"];
     window.onload = () => { fields.forEach(f => { const el = document.querySelector(`[name="${f}"]`); const val = localStorage.getItem(f); if(el && val && !el.value) el.value = val; }); };
     fields.forEach(f => { const el = document.querySelector(`[name="${f}"]`); if(el) el.addEventListener("input", () => localStorage.setItem(f, el.value)); });
@@ -155,39 +131,27 @@ HTML_TEMPLATE = """
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-    context = {
-        "port": "", "onu_type": "", "sn": "", "onu_id": "",
-        "user": "", "password": "", "svlan": "",
-        "onu_type_script": "", "config_script": ""
-    }
+    context = {"port": "", "onu_type": "", "sn": "", "onu_id": "", "user": "", "password": "", "svlan": "", "onu_type_script": "", "config_script": ""}
     if request.method == "POST":
-        context.update({
-            "port": request.form.get("port", ""),
-            "onu_type": request.form.get("type", ""),
-            "sn": request.form.get("sn", ""),
-            "onu_id": request.form.get("onu", ""),
-            "user": request.form.get("user", ""),
-            "password": request.form.get("pass", ""),
-            "svlan": request.form.get("svlan", "")
-        })
+        context.update({"port": request.form.get("port", ""), "onu_type": request.form.get("type", ""), "sn": request.form.get("sn", ""), "onu_id": request.form.get("onu", ""), "user": request.form.get("user", ""), "password": request.form.get("pass", ""), "svlan": request.form.get("svlan", "")})
         def highlight(val): return f'<span class="input-value">{val}</span>'
         context["config_script"] = f"""interface gpon_olt-{highlight(context['port'])}
- onu {highlight(context['onu_id'])} type ZXHN-{highlight(context['onu_type'])} sn {highlight(context['sn'])}
- bind-onu {highlight(context['onu_id'])} profile line HSI-Nolimit
- bind-onu {highlight(context['onu_id'])} profile service HSI-Nolimit
+onu {highlight(context['onu_id'])} type ZXHN-{highlight(context['onu_type'])} sn {highlight(context['sn'])}
+bind-onu {highlight(context['onu_id'])} profile line HSI-Nolimit
+bind-onu {highlight(context['onu_id'])} profile service HSI-Nolimit
 $
 interface gpon_onu-{context['port']}:{highlight(context['onu_id'])}
- name {highlight(context['user'])}
+name {highlight(context['user'])}
 $
 interface vport-{context['port']}.{highlight(context['onu_id'])}:1
- service-port 1 user-vlan 1000 vlan 11 svlan {highlight(context['svlan'])}
+service-port 1 user-vlan 1000 vlan 11 svlan {highlight(context['svlan'])}
 $
 pon-onu-mng gpon_onu-{context['port']}:{context['onu_id']}
- security-mgmt 1 state enable mode forward protocol https
- security-mgmt 2 state enable mode forward protocol telnet
- security-mgmt 3 state enable mode forward protocol web
- wan-ip ipv4 mode pppoe auth pap username {highlight(context['user'])} password {highlight(context['password'])} vlan-profile HSI-VLAN host 1
- wan 1 ethuni 1,2,3,4 ssid 1,5 service internet host 1
+security-mgmt 1 state enable mode forward protocol https
+security-mgmt 2 state enable mode forward protocol telnet
+security-mgmt 3 state enable mode forward protocol web
+wan-ip ipv4 mode pppoe auth pap username {highlight(context['user'])} password {highlight(context['password'])} vlan-profile HSI-VLAN host 1
+wan 1 ethuni 1,2,3,4 ssid 1,5 service internet host 1
 $"""
         context["onu_type_script"] = f"""pon
 onu-type ZXHN-{highlight(context['onu_type'])} gpon description 4ETH,2POTS,8WIFI max-tcont 8 max-gemport 32 max-iphost 6 max-ipv6-host 6
