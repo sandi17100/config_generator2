@@ -189,7 +189,8 @@ pon-onu-mng gpon_onu-{context['port']}:{context['onu_id']}
  wan-ip ipv4 mode pppoe auth pap username {highlight(context['user'])} password {highlight(context['password'])} vlan-profile HSI-VLAN host 1
  wan 1 ethuni 1,2,3,4 ssid 1,5 service internet host 1
 $"""
-        context["onu_type_script"] = f"""onu-type ZXHN-{highlight(context['onu_type'])} gpon description 4ETH,2POTS,8WIFI max-tcont 8 max-gemport 32 max-iphost 6 max-ipv6-host 6
+        context["onu_type_script"] = f"""pon
+onu-type ZXHN-{highlight(context['onu_type'])} gpon description 4ETH,2POTS,8WIFI max-tcont 8 max-gemport 32 max-iphost 6 max-ipv6-host 6
 onu-type-if ZXHN-{context['onu_type']} eth_0/1
 onu-type-if ZXHN-{context['onu_type']} eth_0/2
 onu-type-if ZXHN-{context['onu_type']} eth_0/3
