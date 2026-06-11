@@ -213,13 +213,13 @@ def home():
  bind-onu {highlight(context['onu_id'])} profile line HSI-Nolimit
  bind-onu {highlight(context['onu_id'])} profile service HSI-Nolimit
 $
-interface gpon_onu-{context['port']}:{highlight(context['onu_id'])}
+interface gpon_onu-{highlight(context['port'])}:{highlight(context['onu_id'])}
  name {highlight(context['user'])}
 $
-interface vport-{context['port']}.{highlight(context['onu_id'])}:1
+interface vport-{highlight(context['port'])}.{highlight(context['onu_id'])}:1
  service-port 1 user-vlan 1000 vlan 11 svlan {highlight(context['svlan'])}
 $
-pon-onu-mng gpon_onu-{context['port']}:{context['onu_id']}
+pon-onu-mng gpon_onu-{highlight(context['port'])}:{highlight(context['onu_id'])}
  security-mgmt 1 state enable mode forward protocol https
  security-mgmt 2 state enable mode forward protocol telnet
  security-mgmt 3 state enable mode forward protocol web
